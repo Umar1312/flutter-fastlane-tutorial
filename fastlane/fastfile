@@ -1,0 +1,43 @@
+default_platform(:android)
+
+
+desc "Build and deploy Android and iOS App"
+lane :deploy do
+    build()
+    upload_drive_testflight()
+    email_send()
+end
+
+
+lane :build do
+   flutter_build()
+   increment_build_number(xcodeproj: "./ios/Runner.xcodeproj")
+   gym(silent: true, suppress_xcode_output: true,scheme: 'Runner')
+  UI.success("Built APK!")
+end
+
+
+lane :upload_drive_testflight do |values|
+    upload_to_google_drive(
+      drive_keyfile: ENV["SERVICE_ACCOUNT_CREDENTIALS"],
+      service_account: true,
+      folder_id: lane_context[SharedValues::GDRIVE_CREATED_FOLDER_ID],
+      upload_files: ["build/app/outputs/flutter-apk/app-release.apk"]
+    )
+    UI.success("Uploaded to Google Drive!")
+    upload_to_testflight
+    UI.success("Uploaded to TestFlight!")
+    end
+
+
+desc "Send email"
+lane :email_send do
+    gmail(
+    domain: 'yourstory.com',
+    username: ENV["GMAIL_ID"],
+    password: ENV["GMAIL_PASS"],
+    to: ['umar@yourstory.com'],
+    subject: "Hi, this is a test email. Please ignore.",
+    body: "Android and iOS Builds have been released")
+    UI.success("Email Sent")
+end    
